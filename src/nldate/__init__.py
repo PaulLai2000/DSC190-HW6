@@ -1,13 +1,13 @@
 """Natural language date parser package."""
 
-from datetime import date, datetime
 import re
-from typing import Optional
-import dateparser
+from datetime import date, datetime
+
+import dateparser  # type: ignore[import-untyped]
 from dateutil.relativedelta import relativedelta
 
 
-def _parse_offset_expression(text: str, today: date) -> Optional[date]:
+def _parse_offset_expression(text: str, today: date) -> date | None:
     """Parse relative offset expressions like '5 days before Dec 1, 2025' or '1 year after today'."""
     pattern = r"^(.*?)\s+(before|prior to|after|from|since)\s+(.*)$"
     match = re.match(pattern, text, re.IGNORECASE)
@@ -45,19 +45,26 @@ def _parse_offset_expression(text: str, today: date) -> Optional[date]:
     kwargs: dict[str, int] = {}
     for amount_str, unit in units:
         amount_str = amount_str.lower()
-        amount = word_to_num[amount_str] if amount_str in word_to_num else int(amount_str)
+        amount = (
+            word_to_num[amount_str] if amount_str in word_to_num else int(amount_str)
+        )
         unit = unit.lower()
         if not unit.endswith("s"):
             unit += "s"
         kwargs[unit] = kwargs.get(unit, 0) + amount
 
-    delta = relativedelta(**kwargs)
+    delta = relativedelta(
+        years=kwargs.get("years", 0),
+        months=kwargs.get("months", 0),
+        weeks=kwargs.get("weeks", 0),
+        days=kwargs.get("days", 0),
+    )
     if direction in ("before", "prior to"):
         return base_date - delta
     return base_date + delta
 
 
-def parse(s: str, today: Optional[date] = None) -> date:
+def parse(s: str, today: date | None = None) -> date:
     """Parse natural language string into a datetime.date object.
 
     Raises ValueError if input cannot be parsed or is empty.
